@@ -12,6 +12,17 @@ winget install --id Python.Python.3.11 -e
 python -m pip install -r requirements.txt
 ```
 
+## Configurar o modelo e o rastreamento
+
+No `.env`, configure o modelo da Groq e use HTTPS para o LangSmith:
+
+```dotenv
+GROQ_MODEL=openai/gpt-oss-120b
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+```
+
+O modelo precisa estar disponível para a chave da Groq utilizada.
+
 ## Iniciar o PostgreSQL
 
 ```powershell

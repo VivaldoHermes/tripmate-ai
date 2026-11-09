@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import date
 import traceback
 import uvicorn
 
@@ -33,6 +34,8 @@ templates = Jinja2Templates(
 
 class TravelRequest(BaseModel):
     message: str
+    departure_date: date
+    return_date: date
     thread_id: str | None = None
 
 
@@ -48,6 +51,22 @@ async def home(request: Request):
 @app.post("/api/travel")
 async def travel_planner(request_data: TravelRequest):
     try:
+        if request_data.return_date < request_data.departure_date:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "success": False,
+                    "error": "A data de volta deve ser igual ou posterior à data de ida."
+                }
+            )
+
+        nights = (request_data.return_date - request_data.departure_date).days
+        trip_period = {
+            "departure_date": request_data.departure_date.isoformat(),
+            "return_date": request_data.return_date.isoformat(),
+            "days": nights + 1,
+            "nights": nights,
+        }
         user_message = request_data.message.strip()
 
         if not user_message:
@@ -61,12 +80,14 @@ async def travel_planner(request_data: TravelRequest):
 
         result = run_travel_agent(
             user_input=user_message,
-            thread_id=request_data.thread_id
+            thread_id=request_data.thread_id,
+            trip_period=trip_period
         )
 
         return JSONResponse(
             content={
                 "success": True,
+                "trip_period": trip_period,
                 "thread_id": result["thread_id"],
                 "answer": result["answer"],
                 "flight_results": result["flight_results"],

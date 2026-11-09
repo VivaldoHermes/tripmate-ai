@@ -88,11 +88,55 @@ Acesse:
 - Documentação da API: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - Status da aplicação: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
 
-Envie uma solicitação na interface, por exemplo: `Plan a 5 day trip from GRU to NRT including hotels and sightseeing`.
+Envie uma solicitação na interface, por exemplo: `Plan a trip from GRU to NRT including hotels and sightseeing`, preenchendo também **Data de ida** e **Data de volta**. Os campos permanecem preenchidos após uma resposta ou erro. O resumo do período exibe as datas, os dias e as noites calculados pelo servidor. As datas dos campos prevalecem sobre durações conflitantes no texto do pedido.
 
 A integração atual de voos consulta dados de voos e status, sem cotação de passagens. A geração do roteiro depende das APIs externas configuradas.
 
 Para encerrar a aplicação, pressione `Ctrl+C` no terminal.
+
+## Datas da viagem na API
+
+O `POST /api/travel` recebe as datas obrigatórias em formato `YYYY-MM-DD`, além de `message` e do `thread_id` opcional:
+
+```json
+{
+  "message": "Planeje uma viagem de GRU para NRT com hospedagem e passeios",
+  "departure_date": "2026-12-10",
+  "return_date": "2026-12-15"
+}
+```
+
+Em caso de sucesso, a resposta inclui `trip_period`, junto aos campos existentes do planejamento:
+
+```json
+{
+  "departure_date": "2026-12-10",
+  "return_date": "2026-12-15",
+  "days": 6,
+  "nights": 5
+}
+```
+
+Os dias incluem a ida e a volta; as noites correspondem à diferença entre as datas. Ida e volta no mesmo dia resultam em 1 dia e 0 noites, sem hospedagem para pernoite. O período orienta a pesquisa de hospedagem (check-in e check-out) e a geração do roteiro.
+
+Volta anterior à ida retorna HTTP 422 antes de chamar os agentes ou serviços externos:
+
+```json
+{
+  "success": false,
+  "error": "A data de volta deve ser igual ou posterior à data de ida."
+}
+```
+
+Conferência manual pela interface, com a aplicação e suas integrações disponíveis:
+
+| Ação | Resultado esperado |
+| --- | --- |
+| Informar ida em 10/12/2026 e volta em 15/12/2026 e gerar. | Resumo com as datas, 6 dias e 5 noites. |
+| Alterar a volta para 12/12/2026 e gerar novamente. | Resumo atualizado para 3 dias e 2 noites. |
+| Alterar a volta para 09/12/2026 e gerar novamente. | O envio é permitido; a API retorna 422 e a tela exibe a mensagem acima, preservando as datas para correção. |
+| Corrigir a volta para 15/12/2026 e reenviar. | O erro desaparece e o planejamento volta a exibir 6 dias e 5 noites. |
+| Informar ida e volta em 10/12/2026 e gerar. | Resumo com 1 dia e 0 noites. |
 
 ## Comandos úteis do PostgreSQL
 

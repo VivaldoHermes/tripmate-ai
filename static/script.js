@@ -11,6 +11,8 @@ function setLoading(isLoading) {
     const btnLoader = document.getElementById("btnLoader");
 
     sendBtn.disabled = isLoading;
+    document.getElementById("departureDate").disabled = isLoading;
+    document.getElementById("returnDate").disabled = isLoading;
 
     if (isLoading) {
         btnText.classList.add("hidden");
@@ -35,8 +37,18 @@ function hideError() {
     errorBox.textContent = "";
 }
 
-function showResult(answer, threadId) {
+function formatPeriodDate(value) {
+    const [year, month, day] = value.split("-");
+    return `${day}/${month}/${year}`;
+}
+
+function showResult(answer, threadId, period) {
     latestAnswerMarkdown = answer;
+
+    document.getElementById("periodDeparture").textContent = formatPeriodDate(period.departure_date);
+    document.getElementById("periodReturn").textContent = formatPeriodDate(period.return_date);
+    document.getElementById("periodDays").textContent = period.days;
+    document.getElementById("periodNights").textContent = period.nights;
 
     const resultSection = document.getElementById("resultSection");
     const resultBox = document.getElementById("resultBox");
@@ -59,16 +71,29 @@ function showResult(answer, threadId) {
 }
 
 async function sendMessage() {
+    if (document.getElementById("sendBtn").disabled) {
+        return;
+    }
+
     hideError();
 
     const input = document.getElementById("userInput");
     const message = input.value.trim();
+    const departureDate = document.getElementById("departureDate").value;
+    const returnDate = document.getElementById("returnDate").value;
 
     if (!message) {
         showError("Please enter your travel request first.");
         return;
     }
 
+    if (!departureDate || !returnDate) {
+        showError("Preencha a data de ida e a data de volta.");
+        return;
+    }
+
+    document.getElementById("resultSection").classList.add("hidden");
+    latestAnswerMarkdown = "";
     setLoading(true);
 
     try {
@@ -79,6 +104,8 @@ async function sendMessage() {
             },
             body: JSON.stringify({
                 message: message,
+                departure_date: departureDate,
+                return_date: returnDate,
                 thread_id: currentThreadId
             })
         });
@@ -86,13 +113,13 @@ async function sendMessage() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-            throw new Error(data.error || "Something went wrong.");
+            throw new Error(data.error || (data.detail ? "Verifique os campos e informe datas válidas." : "Something went wrong."));
         }
 
         currentThreadId = data.thread_id;
         localStorage.setItem("travel_thread_id", currentThreadId);
 
-        showResult(data.answer, data.thread_id);
+        showResult(data.answer, data.thread_id, data.trip_period);
 
     } catch (error) {
         showError(error.message);

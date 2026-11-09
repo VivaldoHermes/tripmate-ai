@@ -50,6 +50,17 @@
                 </div>
             </div>
 
+            <div class="travel-dates">
+                <label for="departureDate">
+                    Data de ida
+                    <input type="date" id="departureDate" required>
+                </label>
+                <label for="returnDate">
+                    Data de volta
+                    <input type="date" id="returnDate" required>
+                </label>
+            </div>
+
             <div class="input-area">
                 <textarea
                     id="userInput"
@@ -61,6 +72,8 @@
                     <span id="btnLoader" class="loader hidden"></span>
                 </button>
             </div>
+
+            <div id="errorBox" class="error-box hidden" role="alert"></div>
 
             <div class="quick-prompts">
                 <button onclick="setPrompt('Plan a complete 7 days Japan trip from Bangladesh including flights, hotels and sightseeing under 2 lakhs.')">
@@ -103,12 +116,19 @@
 
             <div id="pdfContent" class="pdf-content">
                 <h1 class="pdf-title">AI Travel Plan</h1>
+                <div class="period-card" aria-labelledby="periodTitle">
+                    <h3 id="periodTitle">Resumo do período</h3>
+                    <dl class="period-details">
+                        <div><dt>Ida</dt><dd id="periodDeparture"></dd></div>
+                        <div><dt>Volta</dt><dd id="periodReturn"></dd></div>
+                        <div><dt>Dias</dt><dd id="periodDays"></dd></div>
+                        <div><dt>Noites</dt><dd id="periodNights"></dd></div>
+                    </dl>
+                </div>
                 <div id="resultBox" class="result-box"></div>
             </div>
 
         </section>
-
-        <section id="errorBox" class="error-box hidden"></section>
 
     </main>
 

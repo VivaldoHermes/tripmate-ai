@@ -57,13 +57,36 @@ llm = ChatGroq(
 # State
 # =========================
 
+class TravelPeriod(TypedDict):
+    departure_date: str
+    return_date: str
+    days: int
+    nights: int
+
+
 class TravelState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
     user_query: str
+    trip_period: TravelPeriod | None
     flight_results: str
     hotel_results: str
     itinerary: str
     llm_calls: int
+
+
+def period_instructions(state: TravelState):
+    period = state.get("trip_period")
+    if not period:
+        return "Use the period described in the user request."
+
+    return (
+        f"Departure: {period['departure_date']}. Return: {period['return_date']}. "
+        f"Duration: {period['days']} days (including both dates), {period['nights']} nights. "
+        "These dates and counts override any conflicting duration in the user request. "
+        "Plan each day within this interval. "
+        "Use departure as hotel check-in and return as check-out. "
+        "If there are zero nights, plan a day trip without an overnight hotel stay."
+    )
 
 
 # =========================
@@ -88,7 +111,11 @@ def flight_agent(state: TravelState):
 # =========================
 
 def hotel_agent(state: TravelState):
-    query = f"Best hotels for {state['user_query']}"
+    period = state.get("trip_period")
+    if period and period["nights"] == 0:
+        return {"hotel_results": "Day trip: no overnight hotel stay required."}
+
+    query = f"Best hotels for {state['user_query']}. {period_instructions(state)}"
     hotel_results = tavily_search(query)
 
     return {
@@ -110,6 +137,9 @@ Create a complete travel itinerary.
 
 User Query:
 {state['user_query']}
+
+Travel period (server-calculated):
+{period_instructions(state)}
 
 Flight Results:
 {state['flight_results']}
@@ -141,6 +171,9 @@ Generate the final travel response for the user.
 
 User Request:
 {state['user_query']}
+
+Travel period (server-calculated):
+{period_instructions(state)}
 
 Flights:
 {state['flight_results']}
@@ -217,7 +250,7 @@ travel_graph = graph.compile(checkpointer=checkpointer)
 # Function for FastAPI
 # =========================
 
-def run_travel_agent(user_input: str, thread_id: str | None = None):
+def run_travel_agent(user_input: str, thread_id: str | None = None, trip_period: TravelPeriod | None = None):
     if not thread_id:
         thread_id = f"user_{uuid.uuid4().hex}"
 
@@ -233,6 +266,7 @@ def run_travel_agent(user_input: str, thread_id: str | None = None):
                 HumanMessage(content=user_input)
             ],
             "user_query": user_input,
+            "trip_period": trip_period,
             "flight_results": "",
             "hotel_results": "",
             "itinerary": "",
